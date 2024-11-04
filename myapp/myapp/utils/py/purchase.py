@@ -1,61 +1,61 @@
 import frappe 
 import json
 
-@frappe.whitelist()
-def correction_entry(docs) -> None:
-    docs = json.loads(docs)
-    linked_invoices: list[dict] = frappe.db.get_all("Purchase Invoice Item", filters={"purchase_receipt": docs.get("name")}, fields=["parent" , 'name'])
+# @frappe.whitelist()
+# def correction_entry(docs) -> None:
+#     docs = json.loads(docs)
+#     linked_invoices: list[dict] = frappe.db.get_all("Purchase Invoice Item", filters={"purchase_receipt": docs.get("name")}, fields=["parent" , 'name'])
 
-    for invoice in linked_invoices:
-        frappe.db.set_value("Purchase Invoice Item", invoice.get("parent"), "purchase_receipt", '')
-        frappe.db.commit()
+#     for invoice in linked_invoices:
+#         frappe.db.set_value("Purchase Invoice Item", invoice.get("parent"), "purchase_receipt", '')
+#         frappe.db.commit()
 
-    receipt = frappe.get_doc("Purchase Receipt", docs.get("name"))
-    po : list[str] = []
-    mr : list[str] = []
+#     receipt = frappe.get_doc("Purchase Receipt", docs.get("name"))
+#     po : list[str] = []
+#     mr : list[str] = []
 
-    item_rate : list[float] = []
-    for item in receipt.items:
-        po.append(item.purchase_order or None)
-        mr.append(item.material_request or None)
-        frappe.db.set_value("Purchase Receipt Item", item.name, "purchase_order", '' )
-        frappe.db.set_value("Purchase Receipt Item", item.name, "material_request", '')
-        frappe.db.commit()
-        linked_invoice = frappe.db.get_value("Purchase Invoice Item", {"purchase_receipt": docs.get("name"), "item_code": item.item_code}, "rate")
-        item_rate.append(linked_invoice)
+#     item_rate : list[float] = []
+#     for item in receipt.items:
+#         po.append(item.purchase_order or None)
+#         mr.append(item.material_request or None)
+#         frappe.db.set_value("Purchase Receipt Item", item.name, "purchase_order", '' )
+#         frappe.db.set_value("Purchase Receipt Item", item.name, "material_request", '')
+#         frappe.db.commit()
+#         linked_invoice = frappe.db.get_value("Purchase Invoice Item", {"purchase_receipt": docs.get("name"), "item_code": item.item_code}, "rate")
+#         item_rate.append(linked_invoice)
 
-    duplicate = frappe.copy_doc(receipt)
+#     duplicate = frappe.copy_doc(receipt)
 
-    for  idx , i in enumerate(duplicate.items):
+#     for  idx , i in enumerate(duplicate.items):
 
-        if i.serial_and_batch_bundle:
-            bundle = frappe.get_doc("Serial and Batch Bundle", i.serial_and_batch_bundle)
-            new_bundle = frappe.copy_doc(bundle)
-            new_bundle.save()
-            i.serial_and_batch_bundle = new_bundle.name
-            i.purchase_order = po[idx] if po[idx] is not None else None
-            i.material_request = mr[idx] if mr[idx] is not None else None
-            i.rate = item_rate[idx] if item_rate[idx] is not None else i.rate
+#         if i.serial_and_batch_bundle:
+#             bundle = frappe.get_doc("Serial and Batch Bundle", i.serial_and_batch_bundle)
+#             new_bundle = frappe.copy_doc(bundle)
+#             new_bundle.save()
+#             i.serial_and_batch_bundle = new_bundle.name
+#             i.purchase_order = po[idx] if po[idx] is not None else None
+#             i.material_request = mr[idx] if mr[idx] is not None else None
+#             i.rate = item_rate[idx] if item_rate[idx] is not None else i.rate
 
-    duplicate.set_posting_time = 1
-    duplicate.status = "Completed"
-    duplicate.posting_date = docs.get("posting_date")
-    duplicate.posting_time = docs.get("posting_time")
+#     duplicate.set_posting_time = 1
+#     duplicate.status = "Completed"
+#     duplicate.posting_date = docs.get("posting_date")
+#     duplicate.posting_time = docs.get("posting_time")
 
-    duplicate.save()
-    duplicate.submit()
+#     duplicate.save()
+#     duplicate.submit()
 
     
    
    
-    for invoice in linked_invoices:
+#     for invoice in linked_invoices:
         
-        frappe.db.set_value("Purchase Invoice Item", invoice.get("name"), "purchase_receipt", duplicate.name)
-        frappe.db.commit()
+#         frappe.db.set_value("Purchase Invoice Item", invoice.get("name"), "purchase_receipt", duplicate.name)
+#         frappe.db.commit()
     
-    receipt.cancel()
+#     receipt.cancel()
 
-    return duplicate.name
+#     return duplicate.name
 
 
 import frappe
